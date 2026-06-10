@@ -18,14 +18,10 @@
 /// - intro-style (function): A text function with any style arguments you want. This style will be applied to notions when they are introduced with the intro() function. The default intro-style is italic with a reddish fill color. Note that in "paper" mode, the fill and stroke styles will be ignored and set to none
 /// - sy-style (function): A text function with any style arguments you want. This style will be applied to notions when they are used as synonyms with the sy() function. The default sy-style is bold with a blueish fill color. Note that in "paper" mode, the fill and stroke styles will be ignored and set to none
 /// -> none
-#let synapse-config(mode: "composition", intro-style: none, sy-style: none) = {
+#let synapse-config(mode: "composition", intro-style: none, sy-style: none) = context {
   config.update(old => {
     let intro-style = if intro-style != none { intro-style } else { old.intro-style }
     let sy-style = if sy-style != none { sy-style } else { old.sy-style }
-    if mode == "paper" {
-      intro-style = intro-style.with(fill: none, stroke: none)
-      sy-style = sy-style.with(fill: none, stroke: none)
-    }
     return (mode: mode, intro-style: intro-style, sy-style: sy-style)
   })
 }
@@ -62,6 +58,19 @@
 }
 
 
+#let get-styled-text(meta) = {
+  let styled-text = if meta != none and meta.style != none {
+    meta.style
+  } else {
+    config.get().intro-style
+  }
+  if config.get().mode == "paper" {
+    return styled-text.with(fill: text.fill, stroke: none)
+  } else {
+    return styled-text
+  }
+}
+
 #let str-intro(notion) = context {
   if notion not in notions.get().at(0) {
     // TODO: manage undefined notions correctly
@@ -73,11 +82,7 @@
     panic("Notion " + notion + " has a URL: " + meta.url + ", so it cannot be introduced")
   }
 
-  let styled-text = if meta.style != none {
-    meta.style
-  } else {
-    config.get().intro-style
-  }
+  let styled-text = get-styled-text(meta)
 
   [
     #styled-text(notion)
@@ -87,22 +92,21 @@
 
 #let str-sy(notion) = context {
   if notion not in notions.get().at(0) {
-    let styled-text = config.get().sy-style
-    return highlight(styled-text(notion), fill: rgb("#ff7171"))
+    let styled-text = get-styled-text(none)
+    if config.get().mode == "composition" {
+      return highlight(styled-text(notion), fill: rgb("#ff7171"))
+    } else {
+      return styled-text(notion)
+    }
   }
 
   let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
-
-  let styled-text = if meta.style != none {
-    meta.style
-  } else {
-    config.get().sy-style
-  }
+  let styled-text = get-styled-text(meta)
 
   if meta.url != none {
-    return link(meta.url, styled-text(notion))
+    link(meta.url, styled-text(notion))
   } else {
-    return link(label(meta.repr), styled-text(notion))
+    link(label(meta.repr), styled-text(notion))
   }
 }
 
