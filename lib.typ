@@ -16,7 +16,7 @@
 ///
 /// - mode ("paper", "electronic", "composition"): Change the synapse mode, which affects how notions are displayed. "paper" mode is optimized for print and will display notions in default document text colors (the color related styles will be ignored), "electronic" mode is optimized for screens and will display notions in color, and "composition" mode display everything like "electronic" mode but also highlight notions with a light red background if they are not introduced yet and display anchors with red markers. The default mode is "composition".
 /// - intro-style (function): A text function with any style arguments you want. This style will be applied to notions when they are introduced with the intro() function. The default intro-style is italic with a reddish fill color. Note that in "paper" mode, the fill and stroke styles will be ignored and set to none
-/// - sy-style (function): A text function with any style arguments you want. This style will be applied to notions when they are used as synonyms with the sy() function. The default sy-style is bold with a blueish fill color. Note that in "paper" mode, the fill and stroke styles will be ignored and set to none
+/// - sy-style (function): A text function with any style arguments you want. This style will be applied to notions when they are used as synonyms with the syn() function. The default sy-style is bold with a blueish fill color. Note that in "paper" mode, the fill and stroke styles will be ignored and set to none
 /// -> none
 #let synapse-config(mode: "composition", intro-style: none, sy-style: none) = context {
   config.update(old => {
@@ -142,7 +142,7 @@
 ///
 /// - notion (str, content): The text notion to use as a synonym. The notion can be either a string or a content. If the notion is a string, it will be used as is. If the notion is a content, it must be a text content with the notion wrapped in double quotes (e.g. "notion").
 /// -> content
-#let sy(notion) = {
+#let syn(notion) = {
   if type(notion) == str {
     return str-sy(notion)
   } else if type(notion) == content {
@@ -150,17 +150,20 @@
       notion = notion.text
       return str-sy(notion.slice(1, -1))
     } else {
-      panic("Unsupported content type for sy: " + notion.type)
+      panic("Unsupported content type for syn: " + notion.type)
     }
   } else {
-    panic("Unsupported type for sy: " + type(notion))
+    panic("Unsupported type for syn: " + type(notion))
   }
 }
 
 
-/// Show rule to replace "<notion>" with sy(notion) and ""<notion>"" with intro(notion)
+
+
+
+/// Show rule to replace "<notion>" with syn(notion) and ""<notion>"" with intro(notion)
 #let quote-rule(el) = {
   show regex("\"\"[^\"]+\"\""): it => intro(it)
-  show regex("\"[^\"]+\""): it => sy(it)
+  show regex("\"[^\"]+\""): it => syn(it)
   el
 }
