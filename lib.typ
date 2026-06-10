@@ -106,6 +106,10 @@
   }
 }
 
+/// This function is used to introduce a notion for the first time in the document. It takes a notion as an argument, which can be either a string or a content. If the notion is a string, it will be introduced as is. The introduced notion will be displayed with the intro-style defined in the synapse configuration.
+///
+/// - notion (str, content): The text notion to introduce. The notion can be either a string or a content. If the notion is a string, it will be introduced as is. If the notion is a content, it must be a text content with the notion wrapped in pairs of double quotes (e.g. ""notion"").
+/// -> content
 #let intro(notion) = {
   if type(notion) == str {
     return str-intro(notion)
@@ -121,6 +125,10 @@
   }
 }
 
+/// This function is used to use a notion as a synonym in the document. It takes a notion as an argument. If the notion has been introduced before with the intro() function, it will link to the introduced notion. If the notion is not defined, it will be displayed with a highlight and a reddish fill to indicate that it is an undefined notion if in compose mode.
+///
+/// - notion (str, content): The text notion to use as a synonym. The notion can be either a string or a content. If the notion is a string, it will be used as is. If the notion is a content, it must be a text content with the notion wrapped in double quotes (e.g. "notion").
+/// -> content
 #let sy(notion) = {
   if type(notion) == str {
     return str-sy(notion)
