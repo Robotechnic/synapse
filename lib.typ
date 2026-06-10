@@ -27,7 +27,8 @@
 }
 
 
-/// This function defines a notion, which is a concept that can be introduced and used as a synonym in the document. Each notion must have at least one synonym, which is the first positional argument. The notion can also have an optional URL and style. The URL makes the notion a link to an external resource, and the style allows you to customize how the notion is displayed when used as a synonym. 
+/// This function defines a notion, which is a concept that can be introduced and used as a synonym in the document. Each notion must have at least one synonym, which is the first positional argument. The notion can also have an optional URL and style. The URL makes the notion a link to an external resource, and the style allows you to customize how the notion is displayed when used as a synonym.
+/// adding a % in the label name allows to scope the notion so it will be displayed the same but will be considered a different notion. This can be useful when you want to use the same term with different meanings in the same document. For example, you could define notion("set", "set%math") to have two different notions for the word "set", one for general use and one for mathematical use.
 ///
 /// - url (str, none): If provided, the notion will be a link to the provided URL. The default is none, which means the notion should have an internal definition in the document. If url is provided, the notion will not be able to be introduced with the intro() function.
 /// - style (function, none): A text function with any style arguments you want. The default is none, which means the notion will have the global default text style. 
@@ -71,6 +72,14 @@
   }
 }
 
+#let get-notion-display(notion) = {
+  if "%" in notion {
+    return notion.split("%").at(0)
+  } else {
+    return notion
+  }
+}
+
 #let str-intro(notion) = context {
   if notion not in notions.get().at(0) {
     // TODO: manage undefined notions correctly
@@ -85,7 +94,7 @@
   let styled-text = get-styled-text(meta)
 
   [
-    #styled-text(notion)
+    #styled-text(get-notion-display(notion))
     #label(meta.repr)
   ]
 }
@@ -104,9 +113,9 @@
   let styled-text = get-styled-text(meta)
 
   if meta.url != none {
-    link(meta.url, styled-text(notion))
+    link(meta.url, styled-text(get-notion-display(notion)))
   } else {
-    link(label(meta.repr), styled-text(notion))
+    link(label(meta.repr), styled-text(get-notion-display(notion)))
   }
 }
 
