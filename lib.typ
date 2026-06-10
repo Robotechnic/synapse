@@ -3,16 +3,53 @@
   ((:), ())
 )
 
+#let config = state(
+  "config",
+  (
+    mode:"composition",
+    intro-style: text.with(style: "italic", fill: rgb("#bd4702")),
+    sy-style: text.with(weight: "bold", fill: rgb("#3b91d8"))
+  )
+)
 
+/// Change the synapse configuration.
+///
+/// - mode ("paper", "electronic", "composition"): Change the synapse mode, which affects how notions are displayed. "paper" mode is optimized for print and will display notions in default document text colors (the color related styles will be ignored), "electronic" mode is optimized for screens and will display notions in color, and "composition" mode display everything like "electronic" mode but also highlight notions with a light red background if they are not introduced yet and display anchors with red markers. The default mode is "composition".
+/// - intro-style (function): A text function with any style arguments you want. This style will be applied to notions when they are introduced with the intro() function. The default intro-style is italic with a reddish fill color. Note that in "paper" mode, the fill and stroke styles will be ignored and set to none
+/// - sy-style (function): A text function with any style arguments you want. This style will be applied to notions when they are used as synonyms with the sy() function. The default sy-style is bold with a blueish fill color. Note that in "paper" mode, the fill and stroke styles will be ignored and set to none
+/// -> none
+#let synapse-config(mode: "composition", intro-style: none, sy-style: none) = {
+  config.update(old => {
+    let intro-style = if intro-style != none { intro-style } else { old.intro-style }
+    let sy-style = if sy-style != none { sy-style } else { old.sy-style }
+    if mode == "paper" {
+      intro-style = intro-style.with(fill: none, stroke: none)
+      sy-style = sy-style.with(fill: none, stroke: none)
+    }
+    return (mode: mode, intro-style: intro-style, sy-style: sy-style)
+  })
+}
+
+
+/// This function defines a notion, which is a concept that can be introduced and used as a synonym in the document. Each notion must have at least one synonym, which is the first positional argument. The notion can also have an optional URL and style. The URL makes the notion a link to an external resource, and the style allows you to customize how the notion is displayed when used as a synonym. 
+///
+/// - url (str, none): If provided, the notion will be a link to the provided URL. The default is none, which means the notion should have an internal definition in the document. If url is provided, the notion will not be able to be introduced with the intro() function.
+/// - style (function, none): A text function with any style arguments you want. The default is none, which means the notion will have the global default text style. 
+/// - synonyms: Any number of positional arguments can be provided as synonyms for the notion. Each synonym must be unique and cannot be used as a synonym for another notion.
+/// -> none
 #let notion(url: none, style: none, ..synonyms) = {
   if synonyms.named().len() > 0 {
     panic("Too many named arguments for notion: " + str(synonyms.named()))
+  }
+  if synonyms.pos().len() == 0 {
+    panic("At least one synonym must be provided for a notion")
   }
   notions.update(old => {
     old.at(1).push((
       repr: synonyms.pos().at(0),
       url: url,
-      style: style
+      style: style,
+      defined: true
     ))
     for synonym in synonyms.pos() {
       if synonym in old.at(0) {
@@ -32,23 +69,40 @@
   }
 
   let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
-  
+  if meta.url != none {
+    panic("Notion " + notion + " has a URL: " + meta.url + ", so it cannot be introduced")
+  }
+
+  let styled-text = if meta.style != none {
+    meta.style
+  } else {
+    config.get().intro-style
+  }
+
   [
-    #text(weight: "light", fill: red, notion)
+    #styled-text(notion)
     #label(meta.repr)
   ]
 }
 
 #let str-sy(notion) = context {
   if notion not in notions.get().at(0) {
-    return text(weight: "bold", notion)
+    let styled-text = config.get().sy-style
+    return highlight(styled-text(notion), fill: rgb("#ff7171"))
   }
 
   let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
-  if meta.url != none {
-    return link(meta.url, text(weight: "bold", notion))
+
+  let styled-text = if meta.style != none {
+    meta.style
   } else {
-    return link(label(meta.repr), text(weight: "bold", notion))
+    config.get().sy-style
+  }
+
+  if meta.url != none {
+    return link(meta.url, styled-text(notion))
+  } else {
+    return link(label(meta.repr), styled-text(notion))
   }
 }
 
