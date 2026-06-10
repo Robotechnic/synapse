@@ -1,15 +1,15 @@
 #let notions = state(
-  "notions", 
-  ((:), ())
+  "notions",
+  ((:), ()),
 )
 
 #let config = state(
   "config",
   (
-    mode:"composition",
+    mode: "composition",
     intro-style: text.with(style: "italic", fill: rgb("#bd4702")),
-    sy-style: text.with(weight: "bold", fill: rgb("#3b91d8"))
-  )
+    sy-style: text.with(weight: "bold", fill: rgb("#3b91d8")),
+  ),
 )
 
 /// Change the synapse configuration.
@@ -18,20 +18,30 @@
 /// - intro-style (function): A text function with any style arguments you want. This style will be applied to notions when they are introduced with the intro() function. The default intro-style is italic with a reddish fill color. Note that in "paper" mode, the fill and stroke styles will be ignored and set to none
 /// - sy-style (function): A text function with any style arguments you want. This style will be applied to notions when they are used as synonyms with the syn() function. The default sy-style is bold with a blueish fill color. Note that in "paper" mode, the fill and stroke styles will be ignored and set to none
 /// -> none
-#let synapse-config(mode: "composition", intro-style: none, sy-style: none) = context {
-  config.update(old => {
-    let intro-style = if intro-style != none { intro-style } else { old.intro-style }
-    let sy-style = if sy-style != none { sy-style } else { old.sy-style }
-    return (mode: mode, intro-style: intro-style, sy-style: sy-style)
-  })
-}
+#let synapse-config(mode: "composition", intro-style: none, sy-style: none) = (
+  context {
+    config.update(old => {
+      let intro-style = if intro-style != none {
+        intro-style
+      } else {
+        old.intro-style
+      }
+      let sy-style = if sy-style != none {
+        sy-style
+      } else {
+        old.sy-style
+      }
+      return (mode: mode, intro-style: intro-style, sy-style: sy-style)
+    })
+  }
+)
 
 
 /// This function defines a notion, which is a concept that can be introduced and used as a synonym in the document. Each notion must have at least one synonym, which is the first positional argument. The notion can also have an optional URL and style. The URL makes the notion a link to an external resource, and the style allows you to customize how the notion is displayed when used as a synonym.
 /// adding a % in the label name allows to scope the notion so it will be displayed the same but will be considered a different notion. This can be useful when you want to use the same term with different meanings in the same document. For example, you could define notion("set", "set%math") to have two different notions for the word "set", one for general use and one for mathematical use.
 ///
 /// - url (str, none): If provided, the notion will be a link to the provided URL. The default is none, which means the notion should have an internal definition in the document. If url is provided, the notion will not be able to be introduced with the intro() function.
-/// - style (function, none): A text function with any style arguments you want. The default is none, which means the notion will have the global default text style. 
+/// - style (function, none): A text function with any style arguments you want. The default is none, which means the notion will have the global default text style.
 /// - synonyms: Any number of positional arguments can be provided as synonyms for the notion. Each synonym must be unique and cannot be used as a synonym for another notion.
 /// -> none
 #let notion(url: none, style: none, ..synonyms) = {
@@ -46,7 +56,7 @@
       repr: synonyms.pos().at(0),
       url: url,
       style: style,
-      defined: true
+      introduced: false,
     ))
     for synonym in synonyms.pos() {
       if synonym in old.at(0) {
@@ -80,44 +90,52 @@
   }
 }
 
-#let str-intro(notion) = context {
-  if notion not in notions.get().at(0) {
-    // TODO: manage undefined notions correctly
-    panic("Notion " + notion + " not found: " + repr(notions.get()))
+#let str-intro(notion) = (
+  context {
+    if notion not in notions.get().at(0) {
+      // TODO: manage undefined notions correctly
+      panic("Notion " + notion + " not found: " + repr(notions.get()))
+    }
+
+    let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
+    notions.update(old => {
+      old.at(1).at(old.at(0).at(notion)).introduced = true
+      return old
+    })
+    if meta.url != none {
+      panic("Notion " + notion + " has a URL: " + meta.url + ", so it cannot be introduced")
+    }
+
+    let styled-text = get-styled-text(meta)
+
+    [
+      #styled-text(get-notion-display(notion))
+      #label(meta.repr)
+    ]
   }
+)
 
-  let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
-  if meta.url != none {
-    panic("Notion " + notion + " has a URL: " + meta.url + ", so it cannot be introduced")
-  }
+#let str-sy(notion) = (
+  context {
+    if notion not in notions.get().at(0) {
+      let styled-text = get-styled-text(none)
+      if config.get().mode == "composition" {
+        return highlight(styled-text(notion), fill: rgb("#ff7171"))
+      } else {
+        return styled-text(notion)
+      }
+    }
 
-  let styled-text = get-styled-text(meta)
+    let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
+    let styled-text = get-styled-text(meta)
 
-  [
-    #styled-text(get-notion-display(notion))
-    #label(meta.repr)
-  ]
-}
-
-#let str-sy(notion) = context {
-  if notion not in notions.get().at(0) {
-    let styled-text = get-styled-text(none)
-    if config.get().mode == "composition" {
-      return highlight(styled-text(notion), fill: rgb("#ff7171"))
+    if meta.url != none {
+      link(meta.url, styled-text(get-notion-display(notion)))
     } else {
-      return styled-text(notion)
+      link(label(meta.repr), styled-text(get-notion-display(notion)))
     }
   }
-
-  let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
-  let styled-text = get-styled-text(meta)
-
-  if meta.url != none {
-    link(meta.url, styled-text(get-notion-display(notion)))
-  } else {
-    link(label(meta.repr), styled-text(get-notion-display(notion)))
-  }
-}
+)
 
 /// This function is used to introduce a notion for the first time in the document. It takes a notion as an argument, which can be either a string or a content. If the notion is a string, it will be introduced as is. The introduced notion will be displayed with the intro-style defined in the synapse configuration.
 ///
@@ -156,10 +174,6 @@
     panic("Unsupported type for syn: " + type(notion))
   }
 }
-
-
-
-
 
 /// Show rule to replace "<notion>" with syn(notion) and ""<notion>"" with intro(notion)
 #let quote-rule(el) = {

@@ -35,4 +35,4 @@ test:
 	tt run -F -j15
 
 format:
-	typstyle -i $$(find ./src -type f -name "*.typ")
+	typstyle -i $$(find . -type f -name "*.typ")
