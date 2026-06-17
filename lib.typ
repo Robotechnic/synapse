@@ -3,6 +3,8 @@
   ((:), ()),
 )
 
+#let notion-wrapper-arg-name = "notion-wrapper-fun"
+
 #let new-notion(repr, url, style) = (
   repr: repr,
   url: url,
@@ -18,6 +20,10 @@
     syn-style: text.with(weight: "bold", fill: rgb("#3b91d8")),
   ),
 )
+
+
+#let notion-label(meta) = (label(meta.repr))
+
 
 /// Change the synapse configuration.
 ///
@@ -53,7 +59,7 @@
 /// -> content
 #let notion(url: none, style: none, ..synonyms) = {
   if synonyms.named().len() > 0 {
-    panic("Too many named arguments for notion: " + str(synonyms.named()))
+    panic("Too many named arguments for notion: " + repr(synonyms.named()))
   }
   if synonyms.pos().len() == 0 {
     panic("At least one synonym must be provided for a notion")
@@ -84,7 +90,6 @@
 }
 
 #let get-notion-display(meta, style, notion, body) = {
-
   let notion-string = if body != none {
     body
   } else if "%" in notion {
@@ -95,29 +100,75 @@
   get-styled-text(meta, style)(notion-string)
 }
 
-#let str-intro(notion, body) = (
+// #let str-intro(notion, body) = (
+//   context {
+//     if notion not in notions.get().at(0) {
+//       panic("Notion " + notion + " not found: " + repr(notions.get().at(0).keys()))
+//     }
+
+//     let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
+//     if meta.introduced{
+//       panic("Notion " + notion + " has already been introduced")
+//     }
+//     notions.update(old => {
+//       old.at(1).at(old.at(0).at(notion)).introduced = true
+//       return old
+//     })
+//     if meta.url != none {
+//       panic("Notion " + notion + " has a URL: " + meta.url + ", so it cannot be introduced")
+//     }
+
+//     let styled-text = get-styled-text(meta, "intro-style")
+//     [
+//       #get-notion-display(meta, "intro-style", notion, body)
+//       #notion-label(meta)
+//     ]
+//   }
+// )
+
+/// Apply the syn-style to a notion without any label or link
+#let styled-intro(notion, body) = (
   context {
     if notion not in notions.get().at(0) {
-      panic("Notion " + notion + " not found: " + repr(notions.get().at(0).keys()))
+      panic("Notion " + notion + " not found: " + repr(
+        notions.get().at(0).keys(),
+      ))
     }
-
     let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
+    let styled-text = get-styled-text(meta, "intro-style")
+    get-notion-display(meta, "intro-style", notion, body)
+  }
+)
+
+/// Apply the given notion label to the body without any style or link
+#let labeled-intro(notion, body) = (
+  context {
+    if notion not in notions.get().at(0) {
+      panic("Notion " + notion + " not found: " + repr(
+        notions.get().at(0).keys(),
+      ))
+    }
+    let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
+    if meta.url != none {
+      panic("Notion " + notion + " has a URL: " + meta.url + ", so it cannot be labeled")
+    }
+    if meta.introduced == true {
+      panic("Notion " + notion + " has already been introduced, so it cannot be labeled")
+    }
     notions.update(old => {
       old.at(1).at(old.at(0).at(notion)).introduced = true
       return old
     })
-    if meta.url != none {
-      panic("Notion " + notion + " has a URL: " + meta.url + ", so it cannot be introduced")
-    }
-
-    let styled-text = get-styled-text(meta, "intro-style")
-
     [
-      #get-notion-display(meta, "intro-style", notion, body)
-      #label(meta.repr)
+      #body
+      #notion-label(meta)
     ]
   }
 )
+
+#let str-intro(notion, body) = {
+  labeled-intro(notion, styled-intro(notion, body))
+}
 
 #let str-sy(notion, body) = (
   context {
@@ -139,22 +190,45 @@
       link(meta.url, display)
     } else if not meta.introduced {
       if config.get().mode == "composition" {
-        highlight(display, fill: rgb("#ff9c71"))
+        highlight(display, fill: rgb("#ffcd71"))
       } else {
         display
       }
     } else {
-      link(label(meta.repr), display)
+      link(notion-label(meta), display)
     }
   }
 )
 
 /// This function is used to introduce a notion for the first time in the document. It takes a notion as an argument, which can be either a string or a content. If the notion is a string, it will be introduced as is. The introduced notion will be displayed with the intro-style defined in the synapse configuration.
 ///
+/// If the provided notion is a function, the remaining function arguments will be passed to the function. See syn-wrapper() for more details on how to use this with functions.
+/// 
+/// If the notion has already been introduced before or if the notion has a URL, an error will be thrown to prevent introducing the same notion multiple times or introducing a notion that is meant to be used as a link to an external resource.
+///
+///
 /// - notion (str, content): The text notion to introduce. The notion can be either a string or a content. If the notion is a string, it will be introduced as is. If the notion is a content, it must be a text content with the notion wrapped in pairs of double quotes (e.g. ""notion"").
 /// - body (content, none): The content to display for the introduction. If not provided, the notion will be displayed as is.
 /// -> content
-#let intro(notion, body: none) = {
+#let intro(..args) = {
+  if args.pos().len() == 0 {
+    panic("At least one positional argument must be provided for intro")
+  }
+  let notion = args.pos().at(0)
+  if type(notion) == function {
+    let pargs = args.pos()
+    pargs.remove(0)
+    let nargs = args.named()
+    nargs.insert(notion-wrapper-arg-name, true)
+    return notion(..pargs, ..nargs)
+  }
+
+  let body = if args.pos().len() > 1 {
+    args.pos().at(1)
+  } else {
+    none
+  }
+
   if type(notion) == str {
     return str-intro(notion, body)
   } else if type(notion) == content {
@@ -162,7 +236,7 @@
       notion = notion.text
       return str-intro(notion.slice(2, -2), body)
     } else {
-      panic("Unsupported content type for intro: " + notion.type)
+      panic("Unsupported content type for intro: " + repr(notion.func()))
     }
   } else {
     panic("Unsupported type for intro: " + type(notion))
@@ -174,7 +248,22 @@
 /// - notion (str, content): The text notion to use as a synonym. The notion can be either a string or a content. If the notion is a string, it will be used as is. If the notion is a content, it must be a text content with the notion wrapped in double quotes (e.g. "notion").
 /// - body (content, none): The content to display for the synonym. If not provided, the notion will be displayed as is.
 /// -> content
-#let syn(notion, body: none) = {
+#let syn(..args) = {
+  if args.named().len() > 0 {
+    panic("syn expects no named arguments, but got: " + repr(args.named()))
+  }
+  if args.pos().len() == 0 {
+    panic("At least one positional argument must be provided for syn")
+  }
+  if args.pos().len() > 2 {
+    panic("Too many positional arguments for syn: " + repr(args.pos()))
+  }
+  let notion = args.pos().at(0)
+  let body = if args.pos().len() > 1 {
+    args.pos().at(1)
+  } else {
+    none
+  }
   if type(notion) == str {
     return str-sy(notion, body)
   } else if type(notion) == content {
@@ -188,6 +277,41 @@
     panic("Unsupported type for syn: " + type(notion))
   }
 }
+
+/// This function is a wrapper for a notion that allows you to define how the notion should be displayed depending on the arguments passed. This function can also be used as an argument for the intro() function.
+/// 
+/// #example(```
+/// #notion("abs")
+///
+/// #let abs = syn-wrapper("abs", (wraper, value) => {
+///  $wraper(|)value#wraper($|$)$
+/// })
+///
+/// #intro(abs, $x$) is a function that returns the absolute value of $x$.\
+/// For instance, $abs(-5)$ will return $5$ while $abs(42)$ will return the exact same value of $42$.
+/// ```)
+///
+/// - notion (str): The notion to wrap. This should be the name of a notion defined with the notion() function.
+/// - function (function): A function that takes at least a wrapper as argument and returns a content. The wrapper is a function that takes a content and applies either the intro-style or the syn-style to it depending on the context. The function can also take additional arguments, which will be passed when introduced or when used as a synonym.
+/// -> function
+#let syn-wrapper(notion, function) = (
+  (..args) => {
+    if notion-wrapper-arg-name in args.named() and args
+      .named()
+      .at(notion-wrapper-arg-name) == true {
+      let named = args.named()
+      let pos = args.pos()
+      named.remove(notion-wrapper-arg-name)
+      return labeled-intro(
+        notion,
+        function(styled-intro.with(notion), ..pos, ..named),
+      )
+    }
+
+    return function(str-sy.with(notion), ..args)
+  }
+)
+
 
 /// Show rule to replace "<notion>" with syn(notion) and ""<notion>"" with intro(notion)
 #let quote-rule(el) = {
