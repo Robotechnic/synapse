@@ -38,8 +38,7 @@
           fill: rgb("#ff7171"),
           extent: .5pt,
           radius: .1em,
-        ) +
-        line(angle: -90deg, length: 1.5em, stroke: rgb("#ff7171")),
+        ) + line(angle: -90deg, length: 1.5em, stroke: rgb("#ff7171")),
         dy: -1.5em,
         dx: -.5pt,
         clearance: 0pt,
@@ -189,15 +188,15 @@
       old.at(1).at(old.at(0).at(notion)).introduced = true
       return old
     })
-if meta.anchored == true {
+    if meta.anchored == true {
       body // don't add a label if the notion is anchored, because the label will be on the anchor point instead of the notion itself
     } else {
-    [
-#intro-marker(notion)
-      #body
-      #notion-label(meta)
-    ]
-}
+      [
+        #intro-marker(notion)
+        #body
+        #notion-label(meta)
+      ]
+    }
   }
 )
 
@@ -238,7 +237,7 @@ if meta.anchored == true {
 /// This function is used to introduce a notion for the first time in the document. It takes a notion as an argument, which can be either a string or a content. If the notion is a string, it will be introduced as is. The introduced notion will be displayed with the intro-style defined in the synapse configuration.
 ///
 /// If the provided notion is a function, the remaining function arguments will be passed to the function. See syn-wrapper() for more details on how to use this with functions.
-/// 
+///
 /// If the notion has already been introduced before or if the notion has a URL, an error will be thrown to prevent introducing the same notion multiple times or introducing a notion that is meant to be used as a link to an external resource.
 ///
 ///
@@ -282,26 +281,30 @@ if meta.anchored == true {
 ///
 /// - notion (str): The notion to introduce. This should be the name of a notion defined with the notion() function.
 /// -> content
-#let intro-ap(notion) = context {
-  if notion not in notions.get().at(0) {
-    panic("Notion " + notion + " not found: " + repr(notions.get().at(0).keys()))
+#let intro-ap(notion) = (
+  context {
+    if notion not in notions.get().at(0) {
+      panic("Notion " + notion + " not found: " + repr(
+        notions.get().at(0).keys(),
+      ))
+    }
+    let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
+    if meta.url != none {
+      panic("Notion " + notion + " has a URL: " + meta.url + ", so it cannot be introduced")
+    }
+    if meta.introduced == true {
+      panic("Notion " + notion + " has already been introduced, so it cannot be introduced again")
+    }
+    [
+      #intro-marker(notion)
+      #notions.update(old => {
+        old.at(1).at(old.at(0).at(notion)).anchored = true
+        return old
+      })
+      #notion-label(meta)
+    ]
   }
-  let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
-  if meta.url != none {
-    panic("Notion " + notion + " has a URL: " + meta.url + ", so it cannot be introduced")
-  }
-  if meta.introduced == true {
-    panic("Notion " + notion + " has already been introduced, so it cannot be introduced again")
-  }
-  [
-    #intro-marker(notion)
-    #notions.update(old => {
-      old.at(1).at(old.at(0).at(notion)).anchored = true
-      return old
-    })
-    #notion-label(meta)
-  ]
-}
+)
 
 /// This function is used to use a notion as a synonym in the document. It takes a notion as an argument. If the notion has been introduced before with the intro() function, it will link to the introduced notion. If the notion is not defined, it will be displayed with a highlight and a reddish fill to indicate that it is an undefined notion if in compose mode.
 ///
@@ -339,7 +342,7 @@ if meta.anchored == true {
 }
 
 /// This function is a wrapper for a notion that allows you to define how the notion should be displayed depending on the arguments passed. This function can also be used as an argument for the intro() function.
-/// 
+///
 /// #example(```
 /// #notion("abs")
 ///
