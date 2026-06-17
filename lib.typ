@@ -10,6 +10,7 @@
   url: url,
   style: style,
   introduced: false,
+  anchored: false,
 )
 
 #let config = state(
@@ -23,6 +24,32 @@
 
 
 #let notion-label(meta) = (label(meta.repr))
+
+#let intro-marker(repr) = {
+  let mode = config.get().mode
+  if mode == "composition" {
+    box(
+      place(
+        highlight(
+          text(
+            repr,
+            size: .7em,
+          ),
+          fill: rgb("#ff7171"),
+          extent: .5pt,
+          radius: .1em,
+        ) +
+        line(angle: -90deg, length: 1.5em, stroke: rgb("#ff7171")),
+        dy: -1.5em,
+        dx: -.5pt,
+        clearance: 0pt,
+      ),
+      width: 0pt,
+    )
+    h(0pt, weak: true)
+  }
+}
+
 
 
 /// Change the synapse configuration.
@@ -159,10 +186,15 @@
       old.at(1).at(old.at(0).at(notion)).introduced = true
       return old
     })
+if meta.anchored == true {
+      body // don't add a label if the notion is anchored, because the label will be on the anchor point instead of the notion itself
+    } else {
     [
+#intro-marker(notion)
       #body
       #notion-label(meta)
     ]
+}
   }
 )
 
@@ -241,6 +273,31 @@
   } else {
     panic("Unsupported type for intro: " + type(notion))
   }
+}
+
+/// This function allow to defile an anchor point for a notion. It should be paired with an intro() call to work, else it won't have any effect. Once introduced, the notion will be linked here instead of the first introduction point. This is useful for instance when the notion is introduced in a paragraph but you want to link to the paragraph beginning instead of the notion itself. In composition mode, the anchor will be marked with a red marker to indicate that it is an anchor point for a notion. In paper and electronic modes, the anchor will not be visible but will still be linked to the notion introduction point.
+///
+/// - notion (str): The notion to introduce. This should be the name of a notion defined with the notion() function.
+/// -> content
+#let intro-ap(notion) = context {
+  if notion not in notions.get().at(0) {
+    panic("Notion " + notion + " not found: " + repr(notions.get().at(0).keys()))
+  }
+  let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
+  if meta.url != none {
+    panic("Notion " + notion + " has a URL: " + meta.url + ", so it cannot be introduced")
+  }
+  if meta.introduced == true {
+    panic("Notion " + notion + " has already been introduced, so it cannot be introduced again")
+  }
+  [
+    #intro-marker(notion)
+    #notions.update(old => {
+      old.at(1).at(old.at(0).at(notion)).anchored = true
+      return old
+    })
+    #notion-label(meta)
+  ]
 }
 
 /// This function is used to use a notion as a synonym in the document. It takes a notion as an argument. If the notion has been introduced before with the intro() function, it will link to the introduced notion. If the notion is not defined, it will be displayed with a highlight and a reddish fill to indicate that it is an undefined notion if in compose mode.
