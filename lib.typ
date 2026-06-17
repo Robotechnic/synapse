@@ -71,6 +71,9 @@
       } else {
         old.syn-style
       }
+      if mode != "composition" and mode != "paper" and mode != "electronic" {
+        panic("Invalid synapse mode: " + repr(mode) + ". Valid modes are: 'composition', 'paper' and 'electronic'")
+      }
       return (mode: mode, intro-style: intro-style, syn-style: syn-style)
     })
   }
