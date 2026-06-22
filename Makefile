@@ -21,7 +21,7 @@ module:
 	cp ./lib.typ $(TARGET_DIR)/
 	cp -r ./src/* $(TARGET_DIR)/src/
 	sed 's|https://typst.app/universe/package/$(PACKAGE_NAME)|https://github.com/Typsium/$(PACKAGE_NAME)|g' ./README.md > $(TARGET_DIR)/README.md
-	sed -i "s/\/master\//\/$(VERSION)\//g" $(TARGET_DIR)/README.md
+	sed -i "s/\/main\//\/$(VERSION)\//g" $(TARGET_DIR)/README.md
 	sed -E -i 's/:[0-9]+\.[0-9]+\.[0-9]+/:$(VERSION)/g' $(TARGET_DIR)/README.md
 	
 
