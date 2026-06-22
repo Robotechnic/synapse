@@ -1,54 +1,7 @@
-#let notions = state(
-  "notions",
-  ((:), ()),
-)
-
-#let notion-wrapper-arg-name = "notion-wrapper-fun"
-
-#let new-notion(repr, url, style) = (
-  repr: repr,
-  url: url,
-  style: style,
-  introduced: false,
-  anchored: false,
-)
-
-#let config = state(
-  "config",
-  (
-    mode: "composition",
-    intro-style: text.with(style: "italic", fill: rgb("#bd4702")),
-    syn-style: text.with(weight: "bold", fill: rgb("#3b91d8")),
-  ),
-)
-
-
-#let notion-label(meta) = (label(meta.repr))
-
-#let intro-marker(repr) = {
-  let mode = config.get().mode
-  if mode == "composition" {
-    box(
-      place(
-        highlight(
-          text(
-            repr,
-            size: .7em,
-          ),
-          fill: rgb("#ff7171"),
-          extent: .5pt,
-          radius: .1em,
-        ) + line(angle: -90deg, length: 1.5em, stroke: rgb("#ff7171")),
-        dy: -1.5em,
-        dx: -.5pt,
-        clearance: 0pt,
-      ),
-      width: 0pt,
-    )
-    h(0pt, weak: true)
-  }
-}
-
+#import "src/config.typ": *
+#import "src/utils.typ": *
+#import "src/intro.typ": *
+#import "src/notion.typ": *
 
 
 /// Change the synapse configuration.
@@ -59,7 +12,7 @@
 /// -> none
 #let synapse-config(mode: "composition", intro-style: none, syn-style: none) = (
   context {
-    config.update(old => {
+    _config.update(old => {
       let intro-style = if intro-style != none {
         intro-style
       } else {
@@ -93,8 +46,8 @@
   if synonyms.pos().len() == 0 {
     panic("At least one synonym must be provided for a notion")
   }
-  notions.update(old => {
-    old.at(1).push(new-notion(synonyms.pos().at(0), url, style))
+  _notions.update(old => {
+    old.at(1).push(_new-notion(synonyms.pos().at(0), url, style))
     for synonym in synonyms.pos() {
       if synonym in old.at(0) {
         panic("Synonym already exists: " + synonym)
@@ -103,30 +56,6 @@
     }
     return old
   })
-}
-
-#let get-styled-text(meta, style) = {
-  let styled-text = if meta != none and meta.style != none {
-    meta.style
-  } else {
-    config.get().at(style)
-  }
-  if config.get().mode == "paper" {
-    return styled-text.with(fill: text.fill, stroke: none)
-  } else {
-    return styled-text
-  }
-}
-
-#let get-notion-display(meta, style, notion, body) = {
-  let notion-string = if body != none {
-    body
-  } else if "%" in notion {
-    notion.split("%").at(0)
-  } else {
-    notion
-  }
-  get-styled-text(meta, style)(notion-string)
 }
 
 // #let str-intro(notion, body) = (
@@ -155,62 +84,13 @@
 //   }
 // )
 
-/// Apply the syn-style to a notion without any label or link
-#let styled-intro(notion, body) = (
-  context {
-    if notion not in notions.get().at(0) {
-      panic("Notion " + notion + " not found: " + repr(
-        notions.get().at(0).keys(),
-      ))
-    }
-    let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
-    let styled-text = get-styled-text(meta, "intro-style")
-    get-notion-display(meta, "intro-style", notion, body)
-  }
-)
-
-/// Apply the given notion label to the body without any style or link
-#let labeled-intro(notion, body) = (
-  context {
-    if notion not in notions.get().at(0) {
-      panic("Notion " + notion + " not found: " + repr(
-        notions.get().at(0).keys(),
-      ))
-    }
-    let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
-    if meta.url != none {
-      panic("Notion " + notion + " has a URL: " + meta.url + ", so it cannot be labeled")
-    }
-    if meta.introduced == true {
-      panic("Notion " + notion + " has already been introduced, so it cannot be labeled")
-    }
-    notions.update(old => {
-      old.at(1).at(old.at(0).at(notion)).introduced = true
-      return old
-    })
-    if meta.anchored == true {
-      body // don't add a label if the notion is anchored, because the label will be on the anchor point instead of the notion itself
-    } else {
-      [
-        #intro-marker(notion)
-        #body
-        #notion-label(meta)
-      ]
-    }
-  }
-)
-
-#let str-intro(notion, body) = {
-  labeled-intro(notion, styled-intro(notion, body))
-}
-
 #let str-sy(notion, body) = (
   context {
-    let notions = notions.final()
+    let notions = _notions.final()
 
     if notion not in notions.at(0) {
-      let display = get-notion-display(none, "syn-style", notion, body)
-      if config.get().mode == "composition" {
+      let display = _get-notion-display(none, "syn-style", notion, body)
+      if _config.get().mode == "composition" {
         return highlight(display, fill: rgb("#ff7171"))
       } else {
         return display
@@ -218,18 +98,18 @@
     }
 
     let meta = notions.at(1).at(notions.at(0).at(notion))
-    let display = get-notion-display(meta, "syn-style", notion, body)
+    let display = _get-notion-display(meta, "syn-style", notion, body)
 
     if meta.url != none {
       link(meta.url, display)
     } else if not meta.introduced {
-      if config.get().mode == "composition" {
+      if _config.get().mode == "composition" {
         highlight(display, fill: rgb("#ffcd71"))
       } else {
         display
       }
     } else {
-      link(notion-label(meta), display)
+      link(_notion-label(meta), display)
     }
   }
 )
@@ -253,7 +133,7 @@
     let pargs = args.pos()
     pargs.remove(0)
     let nargs = args.named()
-    nargs.insert(notion-wrapper-arg-name, true)
+    nargs.insert(_notion-wrapper-arg-name, true)
     return notion(..pargs, ..nargs)
   }
 
@@ -283,12 +163,12 @@
 /// -> content
 #let intro-ap(notion) = (
   context {
-    if notion not in notions.get().at(0) {
+    if notion not in _notions.get().at(0) {
       panic("Notion " + notion + " not found: " + repr(
-        notions.get().at(0).keys(),
+        _notions.get().at(0).keys(),
       ))
     }
-    let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
+    let meta = _notions.get().at(1).at(_notions.get().at(0).at(notion))
     if meta.url != none {
       panic("Notion " + notion + " has a URL: " + meta.url + ", so it cannot be introduced")
     }
@@ -296,12 +176,12 @@
       panic("Notion " + notion + " has already been introduced, so it cannot be introduced again")
     }
     [
-      #intro-marker(notion)
-      #notions.update(old => {
+      #_intro-marker(notion)
+      #_notions.update(old => {
         old.at(1).at(old.at(0).at(notion)).anchored = true
         return old
       })
-      #notion-label(meta)
+      #_notion-label(meta)
     ]
   }
 )
@@ -359,15 +239,15 @@
 /// -> function
 #let syn-wrapper(notion, function) = (
   (..args) => {
-    if notion-wrapper-arg-name in args.named() and args
+    if _notion-wrapper-arg-name in args.named() and args
       .named()
-      .at(notion-wrapper-arg-name) == true {
+      .at(_notion-wrapper-arg-name) == true {
       let named = args.named()
       let pos = args.pos()
-      named.remove(notion-wrapper-arg-name)
-      return labeled-intro(
+      named.remove(_notion-wrapper-arg-name)
+      return _labeled-intro(
         notion,
-        function(styled-intro.with(notion), ..pos, ..named),
+        function(_styled-intro.with(notion), ..pos, ..named),
       )
     }
 
