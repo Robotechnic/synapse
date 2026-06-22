@@ -1,7 +1,7 @@
 #let _modes = (
   "composition": "composition",
   "paper": "paper",
-  "presentation": "presentation",
+  "electronic": "electronic",
 )
 
 #let _config = state(
