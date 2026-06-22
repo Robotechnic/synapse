@@ -46,6 +46,17 @@ The `notion` function also allows you to define an external link for a notion. T
 
 If an url is provided, you can't use the `intro` function to introduce the notion, this will cause an error.
 
+### Notion Scoping
+
+You can create distinct notions with the same display name by adding a `%` suffix to the synonym. For example:
+
+```typst
+#notion("set")  // General use
+#notion("set%math")  // Mathematical use
+```
+
+Both notions will display as "set" in the document, but they are treated as separate concepts with independent introductions and links. This is useful when you want to use the same term with different meanings in the same document.
+
 ### Quick reference with quotes
 
 Writing the function calls every time can be a bit tedious. For this reason, the package also provides a show rule to automatically replace the name of the notion between quotes with the reference to the notion:
@@ -55,12 +66,14 @@ Writing the function calls every time can be a bit tedious. For this reason, the
 "Synapses" are essential for the transmission of neuronal impulses from one neuron to the next, playing a key role in enabling rapid and direct communication by creating circuits. In addition, a "synapse" serves as a junction where both the transmission and processing of information occur, making it a vital means of communication between neurons.
 ```
 
-This also works with introductions with double pair of quotes:
+This also works with introductions with par of double quotes on each side:
 
 ```typst
 #show: quote-rule
 In the nervous system, a ""synapse"" is a structure that allows a neuron to exchange...
 ```
+
+Note: The quote rule matches text surrounded by exactly one pair of quotes (`"text"`) for synonyms and exactly two pairs of quotes (`""text""`) for introductions.
 
 ### Introduction link placement
 
@@ -105,8 +118,8 @@ It is also possible to have math expression linked to a notion. To do this, you 
 ```typst
 #notion("abs")
 
-#let abs = syn-wrapper("abs", (wraper, value) => {
- $wraper(|)value#wraper($|$)$
+#let abs = syn-wrapper("abs", (wrapper, value) => {
+ $wrapper(|)value#wrapper($|$)$
 })
 
 #intro(abs, $x$) is a function that returns the absolute value of $x$.\
@@ -132,7 +145,7 @@ Synapse supports styling of the links and the introduction of the notions. To st
 
 ### Rendering mode
 
-Synapse have three rendering modes: "composition", "electronic" and "paper". The rendering mode can be set with the `synapse-config` function and the `mode` argument. The default rendering mode is "composition". This is the mode used to build your document. It displays everything like normal but on top of that, it highlight the notions with no introductions, the notions that haven't been defined with the `notion` function. It also display a red marking with a label to show where the anchors of the notions are. The "electronic" mode is the mode that display everything like normal but without the red markings and highlights. The "paper" mode is the mode that displays everything in black and white, all the styling is kept except the colors.
+Synapse has three rendering modes: "composition", "electronic" and "paper". The rendering mode can be set with the `synapse-config` function and the `mode` argument. The default rendering mode is "composition". This is the mode used to build your document. It displays everything like normal but on top of that, it highlights notions with no introductions and notions that haven't been defined with the `notion` function. It also displays a red marking with a label to show where the anchors of the notions are. The "electronic" mode displays everything like normal but without the red markings and highlights. The "paper" mode displays everything in black and white. All color-related styles (fill and stroke) are removed, but other styling like font weight and size are preserved.
 
 ```typst
 #synapse-config(mode: "electronic")

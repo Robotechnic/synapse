@@ -129,7 +129,7 @@
   }
 }
 
-/// This function allow to defile an anchor point for a notion. It should be paired with an intro() call to work, else it won't have any effect. Once introduced, the notion will be linked here instead of the first introduction point. This is useful for instance when the notion is introduced in a paragraph but you want to link to the paragraph beginning instead of the notion itself. In composition mode, the anchor will be marked with a red marker to indicate that it is an anchor point for a notion. In paper and electronic modes, the anchor will not be visible but will still be linked to the notion introduction point.
+/// This function allows you to define an anchor point for a notion. It should be paired with an intro() call to work, else it won't have any effect. Once introduced, the notion will be linked here instead of the first introduction point. This is useful for instance when the notion is introduced in a paragraph but you want to link to the paragraph beginning instead of the notion itself. In composition mode, the anchor will be marked with a red marker to indicate that it is an anchor point for a notion. In paper and electronic modes, the anchor will not be visible but will still be linked to the notion introduction point.
 ///
 ///  - notion (str): The notion to introduce. This should be the name of a notion defined with the notion() function.
 /// -> content
@@ -197,8 +197,8 @@
 /// #example(```
 /// #notion("abs")
 ///
-/// #let abs = syn-wrapper("abs", (wraper, value) => {
-///  $wraper(|)value#wraper($|$)$
+/// #let abs = syn-wrapper("abs", (wrapper, value) => {
+///  $wrapper(|)value#wrapper($|$)$
 /// })
 ///
 /// #intro(abs, $x$) is a function that returns the absolute value of $x$.\
