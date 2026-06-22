@@ -6,7 +6,7 @@
 
 /// Change the synapse configuration.
 ///
-/// - mode ("paper", "electronic", "composition"): Change the synapse mode, which affects how notions are displayed. "paper" mode is optimized for print and will display notions in default document text colors (the color related styles will be ignored), "electronic" mode is optimized for screens and will display notions in color, and "composition" mode display everything like "electronic" mode but also highlight notions with a light red background if they are not introduced yet and display anchors with red markers. The default mode is "composition".
+/// - mode (str): Change the synapse mode, which affects how notions are displayed. "paper" mode is optimized for print and will display notions in default document text colors (the color related styles will be ignored), "electronic" mode is optimized for screens and will display notions in color, and "composition" mode display everything like "electronic" mode but also highlight notions with a light red background if they are not introduced yet and display anchors with red markers. The default mode is "composition".
 /// - intro-style (function): A text function with any style arguments you want. This style will be applied to notions when they are introduced with the intro() function. The default intro-style is italic with a reddish fill color. Note that in "paper" mode, the fill and stroke styles will be ignored and set to none
 /// - syn-style (function): A text function with any style arguments you want. This style will be applied to notions when they are used as synonyms with the syn() function. The default syn-style is bold with a blueish fill color. Note that in "paper" mode, the fill and stroke styles will be ignored and set to none
 /// -> none
@@ -58,32 +58,6 @@
   })
 }
 
-// #let str-intro(notion, body) = (
-//   context {
-//     if notion not in notions.get().at(0) {
-//       panic("Notion " + notion + " not found: " + repr(notions.get().at(0).keys()))
-//     }
-
-//     let meta = notions.get().at(1).at(notions.get().at(0).at(notion))
-//     if meta.introduced{
-//       panic("Notion " + notion + " has already been introduced")
-//     }
-//     notions.update(old => {
-//       old.at(1).at(old.at(0).at(notion)).introduced = true
-//       return old
-//     })
-//     if meta.url != none {
-//       panic("Notion " + notion + " has a URL: " + meta.url + ", so it cannot be introduced")
-//     }
-
-//     let styled-text = get-styled-text(meta, "intro-style")
-//     [
-//       #get-notion-display(meta, "intro-style", notion, body)
-//       #notion-label(meta)
-//     ]
-//   }
-// )
-
 #let str-sy(notion, body) = (
   context {
     let notions = _notions.final()
@@ -97,7 +71,7 @@
       }
     }
 
-    let meta = notions.at(1).at(notions.at(0).at(notion))
+    let meta = _get-meta(notion)
     let display = _get-notion-display(meta, "syn-style", notion, body)
 
     if meta.url != none {
@@ -109,20 +83,18 @@
         display
       }
     } else {
-      link(_notion-label(meta), display)
+      link(label(meta.repr), display)
     }
   }
 )
 
-/// This function is used to introduce a notion for the first time in the document. It takes a notion as an argument, which can be either a string or a content. If the notion is a string, it will be introduced as is. The introduced notion will be displayed with the intro-style defined in the synapse configuration.
+/// This function is used to introduce a notion for the first time in the document. It takes a notion and an optional body. If the notion is a string, it will be introduced as is. The introduced notion will be displayed with the intro-style defined in the synapse configuration.
 ///
-/// If the provided notion is a function, the remaining function arguments will be passed to the function. See syn-wrapper() for more details on how to use this with functions.
+/// If the provided notion is a function, the remaining function arguments will be passed to the function. See syn-wrapper for more details on how to use this with functions.
 ///
 /// If the notion has already been introduced before or if the notion has a URL, an error will be thrown to prevent introducing the same notion multiple times or introducing a notion that is meant to be used as a link to an external resource.
 ///
-///
-/// - notion (str, content): The text notion to introduce. The notion can be either a string or a content. If the notion is a string, it will be introduced as is. If the notion is a content, it must be a text content with the notion wrapped in pairs of double quotes (e.g. ""notion"").
-/// - body (content, none): The content to display for the introduction. If not provided, the notion will be displayed as is.
+/// - ..args (str, content, function): The text notion to introduce and either a body or the additional parameter to the introduced function (see syn-wrapper()). 
 /// -> content
 #let intro(..args) = {
   if args.pos().len() == 0 {
@@ -159,16 +131,16 @@
 
 /// This function allow to defile an anchor point for a notion. It should be paired with an intro() call to work, else it won't have any effect. Once introduced, the notion will be linked here instead of the first introduction point. This is useful for instance when the notion is introduced in a paragraph but you want to link to the paragraph beginning instead of the notion itself. In composition mode, the anchor will be marked with a red marker to indicate that it is an anchor point for a notion. In paper and electronic modes, the anchor will not be visible but will still be linked to the notion introduction point.
 ///
-/// - notion (str): The notion to introduce. This should be the name of a notion defined with the notion() function.
+///  - notion (str): The notion to introduce. This should be the name of a notion defined with the notion() function.
 /// -> content
 #let intro-ap(notion) = (
   context {
-    if notion not in _notions.get().at(0) {
+    if not _is-existing-notion(notion) {
       panic("Notion " + notion + " not found: " + repr(
         _notions.get().at(0).keys(),
       ))
     }
-    let meta = _notions.get().at(1).at(_notions.get().at(0).at(notion))
+    let meta = _get-meta(notion)
     if meta.url != none {
       panic("Notion " + notion + " has a URL: " + meta.url + ", so it cannot be introduced")
     }
@@ -181,15 +153,14 @@
         old.at(1).at(old.at(0).at(notion)).anchored = true
         return old
       })
-      #_notion-label(meta)
+      #label(meta.repr)
     ]
   }
 )
 
-/// This function is used to use a notion as a synonym in the document. It takes a notion as an argument. If the notion has been introduced before with the intro() function, it will link to the introduced notion. If the notion is not defined, it will be displayed with a highlight and a reddish fill to indicate that it is an undefined notion if in compose mode.
+/// This function is used to use a notion as a synonym in the document. It takes a notion as an argument. If the notion has been introduced before with the intro() function, it will link to the introduced notion. If the notion is not defined, in composition mode, it will be displayed with a highlight and a reddish fill to indicate that it is an undefined notion if in compose mode.
 ///
-/// - notion (str, content): The text notion to use as a synonym. The notion can be either a string or a content. If the notion is a string, it will be used as is. If the notion is a content, it must be a text content with the notion wrapped in double quotes (e.g. "notion").
-/// - body (content, none): The content to display for the synonym. If not provided, the notion will be displayed as is.
+///  - ..args (str, content): The text notion to use as a synonym and an optional body. The body is used to change how the notion is displayed when used as a synonym.
 /// -> content
 #let syn(..args) = {
   if args.named().len() > 0 {
@@ -256,7 +227,7 @@
 )
 
 
-/// Show rule to replace "<notion>" with syn(notion) and ""<notion>"" with intro(notion)
+/// Show rule to replace `"<notion>"` with `#syn(notion)` and `""<notion>""` with `#intro(notion)`
 #let quote-rule(el) = {
   show regex("\"\"[^\"]+\"\""): it => intro(it)
   show regex("\"[^\"]+\""): it => syn(it)

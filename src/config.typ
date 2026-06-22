@@ -1,3 +1,9 @@
+#let _modes = (
+  "composition": "composition",
+  "paper": "paper",
+  "presentation": "presentation",
+)
+
 #let _config = state(
   "config",
   (
@@ -6,3 +12,12 @@
     syn-style: text.with(weight: "bold", fill: rgb("#3b91d8")),
   ),
 )
+
+#let _style-of(style-name) = _config.get().at(style-name)
+#let _writing-mode() = _config.get().mode
+#let _is-mode(mode) = {
+  if mode not in _modes {
+    panic("Invalid mode: " + mode + ". Valid modes are: " + repr(_modes.keys()))
+  }
+  _writing-mode() == _modes.at(mode)
+}
