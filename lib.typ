@@ -71,7 +71,9 @@
       }
     }
 
-    let meta = _get-meta(notion)
+    // Use the final notion metadata so forward references can link
+    // to an introduction that appears later in the document.
+    let meta = notions.at(1).at(notions.at(0).at(notion))
     let display = _get-notion-display(meta, "syn-style", notion, body)
 
     if meta.url != none {
