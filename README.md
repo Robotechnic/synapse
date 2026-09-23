@@ -152,3 +152,13 @@ Synapse has three rendering modes: "composition", "electronic" and "paper". The 
 ```
 
 This will set the rendering mode to "electronic". You can change the rendering mode at any point in the document, but it is recommended to set it at the beginning of the document.
+
+## Changelog
+
+### 0.1.1
+
+- Fixed a bug where the `syn` function would pick the wrong context and thus not apply the correct link to the notion.
+
+### 0.1.0
+
+- Initial release of the synapse package.
