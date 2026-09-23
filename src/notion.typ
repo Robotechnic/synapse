@@ -14,6 +14,8 @@
 )
 
 #let _is-existing-notion(repr) = repr in _notions.get().at(0)
-#let _get-meta(notion) = _notions.get().at(1).at(
-  _notions.get().at(0).at(notion),
+#let _get-meta-of(notions, notion) = notions.at(1).at(
+  notions.at(0).at(notion),
 )
+
+#let _get-meta(notion) = _get-meta-of(_notions.get(), notion)

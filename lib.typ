@@ -71,7 +71,7 @@
       }
     }
 
-    let meta = _get-meta(notion)
+    let meta = _get-meta-of(notions, notion)
     let display = _get-notion-display(meta, "syn-style", notion, body)
 
     if meta.url != none {
